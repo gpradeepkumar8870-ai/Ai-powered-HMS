@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Appointments | AI-HMS</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<div class="d-flex">
+  <nav class="sidebar" style="width:250px;">
+    <h5 class="text-white px-3 mb-4"><i class="bi bi-heart-pulse-fill"></i> AI-HMS</h5>
+    <ul class="nav flex-column">
+      <li class="nav-item"><a class="nav-link" href="dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link active" href="appointments.html"><i class="bi bi-calendar-check"></i> Appointments</a></li>
+      <li class="nav-item"><a class="nav-link" href="prescriptions.html"><i class="bi bi-capsule"></i> Prescriptions</a></li>
+      <li class="nav-item"><a class="nav-link" href="symptom-checker.html"><i class="bi bi-robot"></i> AI Symptom Checker</a></li>
+      <li class="nav-item"><a class="nav-link" href="medical-history.html"><i class="bi bi-file-earmark-medical"></i> Medical History</a></li>
+      <li class="nav-item"><a class="nav-link" href="billing.html"><i class="bi bi-receipt"></i> Billing</a></li>
+      <li class="nav-item mt-4"><a class="nav-link text-danger" href="#" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+    </ul>
+  </nav>
+
+  <main class="flex-grow-1 p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h4 class="mb-0">My Appointments</h4>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#bookModal"><i class="bi bi-plus-circle"></i> Book New</button>
+    </div>
+
+    <div class="card p-3">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead><tr><th>Doctor</th><th>Department</th><th>Date</th><th>Time</th><th>Reason</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="appt-body"><tr><td colspan="7" class="text-center text-muted-sm">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Book Appointment Modal -->
+<div class="modal fade" id="bookModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Book an Appointment</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="book-form">
+        <div class="modal-body">
+          <div id="book-alert" class="alert alert-danger d-none"></div>
+          <div class="mb-3">
+            <label class="form-label">Department</label>
+            <select class="form-select" id="dept-filter"></select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Doctor</label>
+            <select class="form-select" id="doctor-select" required></select>
+          </div>
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label">Date</label>
+              <input type="date" class="form-control" id="appt-date" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Time Slot</label>
+              <select class="form-select" id="time-slot" required>
+                <option>09:00 AM</option><option>10:00 AM</option><option>11:00 AM</option>
+                <option>12:00 PM</option><option>02:00 PM</option><option>03:00 PM</option>
+                <option>04:00 PM</option><option>05:00 PM</option>
+              </select>
+            </div>
+          </div>
+          <div class="mb-3 mt-3">
+            <label class="form-label">Reason for visit</label>
+            <textarea class="form-control" id="reason" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary w-100" id="book-btn">Confirm Booking</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/chatbot.js"></script>
+<script>
+requireRole("patient");
+initChatbot();
+let allDoctors = [];
+
+async function loadAppointments() {
+  try {
+    const res = await API.listAppointments();
+    const tbody = document.getElementById("appt-body");
+    if (res.appointments.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted-sm">No appointments yet</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = res.appointments.map(a => `
+      <tr>
+        <td>${a.doctor_name}</td>
+        <td>${a.department}</td>
+        <td>${formatDate(a.date)}</td>
+        <td>${a.time_slot}</td>
+        <td>${a.reason || "-"}</td>
+        <td>${statusBadge(a.status)}</td>
+        <td>${["scheduled","confirmed"].includes(a.status) ? `<button class="btn btn-sm btn-outline-danger" onclick="cancelAppt('${a._id}')">Cancel</button>` : "-"}</td>
+      </tr>`).join("");
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
+async function cancelAppt(id) {
+  if (!confirm("Cancel this appointment?")) return;
+  try {
+    await API.cancelAppointment(id);
+    showToast("Appointment cancelled");
+    loadAppointments();
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
+async function loadDoctors() {
+  try {
+    const res = await API.listDoctors();
+    allDoctors = res.doctors;
+    const depts = [...new Set(allDoctors.map(d => d.department))];
+    document.getElementById("dept-filter").innerHTML =
+      `<option value="">All Departments</option>` + depts.map(d => `<option value="${d}">${d}</option>`).join("");
+    renderDoctorOptions(allDoctors);
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
+function renderDoctorOptions(doctors) {
+  document.getElementById("doctor-select").innerHTML = doctors.map(d =>
+    `<option value="${d._id}">${d.name} — ${d.department} (₹${d.consultation_fee})</option>`).join("");
+}
+
+document.getElementById("dept-filter").addEventListener("change", (e) => {
+  const dept = e.target.value;
+  renderDoctorOptions(dept ? allDoctors.filter(d => d.department === dept) : allDoctors);
+});
+
+document.getElementById("book-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const alertBox = document.getElementById("book-alert");
+  const btn = document.getElementById("book-btn");
+  alertBox.classList.add("d-none");
+  btn.disabled = true;
+
+  try {
+    await API.bookAppointment({
+      doctor_id: document.getElementById("doctor-select").value,
+      date: document.getElementById("appt-date").value,
+      time_slot: document.getElementById("time-slot").value,
+      reason: document.getElementById("reason").value,
+    });
+    bootstrap.Modal.getInstance(document.getElementById("bookModal")).hide();
+    showToast("Appointment booked successfully!");
+    document.getElementById("book-form").reset();
+    loadAppointments();
+  } catch (err) {
+    alertBox.textContent = err.message;
+    alertBox.classList.remove("d-none");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+loadAppointments();
+loadDoctors();
+</script>
+</body>
+</html>
