@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Billing | AI-HMS</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<div class="d-flex">
+  <nav class="sidebar" style="width:250px;">
+    <h5 class="text-white px-3 mb-4"><i class="bi bi-heart-pulse-fill"></i> AI-HMS</h5>
+    <ul class="nav flex-column">
+      <li class="nav-item"><a class="nav-link" href="dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link" href="appointments.html"><i class="bi bi-calendar-check"></i> Appointments</a></li>
+      <li class="nav-item"><a class="nav-link" href="prescriptions.html"><i class="bi bi-capsule"></i> Prescriptions</a></li>
+      <li class="nav-item"><a class="nav-link" href="symptom-checker.html"><i class="bi bi-robot"></i> AI Symptom Checker</a></li>
+      <li class="nav-item"><a class="nav-link" href="medical-history.html"><i class="bi bi-file-earmark-medical"></i> Medical History</a></li>
+      <li class="nav-item"><a class="nav-link active" href="billing.html"><i class="bi bi-receipt"></i> Billing</a></li>
+      <li class="nav-item mt-4"><a class="nav-link text-danger" href="#" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+    </ul>
+  </nav>
+
+  <main class="flex-grow-1 p-4">
+    <h4 class="mb-1">My Bills</h4>
+    <p class="text-muted-sm mb-4">View and pay your hospital bills.</p>
+
+    <div class="row g-3 mb-4">
+      <div class="col-md-4">
+        <div class="stat-card d-flex align-items-center gap-3">
+          <div class="stat-icon bg-danger"><i class="bi bi-exclamation-circle"></i></div>
+          <div><div class="stat-value" id="stat-pending-amount">-</div><div class="text-muted-sm">Pending Amount</div></div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="stat-card d-flex align-items-center gap-3">
+          <div class="stat-icon bg-success"><i class="bi bi-check-circle"></i></div>
+          <div><div class="stat-value" id="stat-paid-amount">-</div><div class="text-muted-sm">Total Paid</div></div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="stat-card d-flex align-items-center gap-3">
+          <div class="stat-icon bg-primary"><i class="bi bi-receipt"></i></div>
+          <div><div class="stat-value" id="stat-total-bills">-</div><div class="text-muted-sm">Total Bills</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card p-3">
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead><tr><th>Date</th><th>Items</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="bills-body"><tr><td colspan="5" class="text-center text-muted-sm">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Bill detail / pay modal -->
+<div class="modal fade" id="payModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Bill Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="pay-modal-body"></div>
+      <div class="modal-footer">
+        <button class="btn btn-success w-100" id="pay-now-btn">
+          <i class="bi bi-credit-card"></i> Pay Now (Demo)
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/chatbot.js"></script>
+<script>
+requireRole("patient");
+initChatbot();
+let currentBillId = null;
+
+async function loadBills() {
+  try {
+    const res = await API.listBills();
+    const bills = res.bills;
+
+    const pending = bills.filter(b => b.status === "pending").reduce((s, b) => s + b.amount, 0);
+    const paid = bills.filter(b => b.status === "paid").reduce((s, b) => s + b.amount, 0);
+    document.getElementById("stat-pending-amount").textContent = "₹" + pending.toLocaleString("en-IN");
+    document.getElementById("stat-paid-amount").textContent = "₹" + paid.toLocaleString("en-IN");
+    document.getElementById("stat-total-bills").textContent = bills.length;
+
+    document.getElementById("bills-body").innerHTML = bills.length
+      ? bills.map(b => `
+        <tr>
+          <td>${formatDate(b.created_at)}</td>
+          <td>${b.items.map(i => i.description).join(", ")}</td>
+          <td>₹${b.amount.toLocaleString("en-IN")}</td>
+          <td><span class="badge ${b.status === 'paid' ? 'bg-success' : 'bg-warning text-dark'}">${b.status}</span></td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary" onclick='openBill(${JSON.stringify(b)})'>
+              ${b.status === "pending" ? "View & Pay" : "View"}
+            </button>
+          </td>
+        </tr>`).join("")
+      : `<tr><td colspan="5" class="text-center text-muted-sm">No bills yet</td></tr>`;
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
+function openBill(bill) {
+  currentBillId = bill._id;
+  const body = document.getElementById("pay-modal-body");
+  body.innerHTML = `
+    <ul class="list-group list-group-flush mb-3">
+      ${bill.items.map(i => `
+        <li class="list-group-item d-flex justify-content-between px-0">
+          <span>${i.description}</span><span>₹${i.amount.toLocaleString("en-IN")}</span>
+        </li>`).join("")}
+    </ul>
+    <div class="d-flex justify-content-between fw-bold border-top pt-2">
+      <span>Total</span><span>₹${bill.amount.toLocaleString("en-IN")}</span>
+    </div>
+    <div class="mt-2">Status: ${bill.status === "paid" ? '<span class="badge bg-success">paid</span>' : '<span class="badge bg-warning text-dark">pending</span>'}</div>
+  `;
+  const payBtn = document.getElementById("pay-now-btn");
+  payBtn.classList.toggle("d-none", bill.status === "paid");
+  new bootstrap.Modal(document.getElementById("payModal")).show();
+}
+
+document.getElementById("pay-now-btn").addEventListener("click", async () => {
+  if (!currentBillId) return;
+  try {
+    await API.markBillPaid(currentBillId);
+    showToast("Payment successful!");
+    bootstrap.Modal.getInstance(document.getElementById("payModal")).hide();
+    loadBills();
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+});
+
+loadBills();
+</script>
+</body>
+</html>
