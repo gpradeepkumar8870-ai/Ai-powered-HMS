@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Symptom Checker | AI-HMS</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<div class="d-flex">
+  <nav class="sidebar" style="width:250px;">
+    <h5 class="text-white px-3 mb-4"><i class="bi bi-heart-pulse-fill"></i> AI-HMS</h5>
+    <ul class="nav flex-column">
+      <li class="nav-item"><a class="nav-link" href="dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link" href="appointments.html"><i class="bi bi-calendar-check"></i> Appointments</a></li>
+      <li class="nav-item"><a class="nav-link" href="prescriptions.html"><i class="bi bi-capsule"></i> Prescriptions</a></li>
+      <li class="nav-item"><a class="nav-link active" href="symptom-checker.html"><i class="bi bi-robot"></i> AI Symptom Checker</a></li>
+      <li class="nav-item"><a class="nav-link" href="medical-history.html"><i class="bi bi-file-earmark-medical"></i> Medical History</a></li>
+      <li class="nav-item"><a class="nav-link" href="billing.html"><i class="bi bi-receipt"></i> Billing</a></li>
+      <li class="nav-item mt-4"><a class="nav-link text-danger" href="#" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+    </ul>
+  </nav>
+
+  <main class="flex-grow-1 p-4">
+    <h4 class="mb-1"><i class="bi bi-robot text-primary"></i> AI Symptom Checker</h4>
+    <p class="text-muted-sm mb-4">Select the symptoms you're experiencing. Our ML model will suggest possible conditions and the right specialist.</p>
+
+    <div class="card p-4 mb-4">
+      <h6 class="fw-bold mb-3">Select your symptoms</h6>
+      <div id="symptom-chips" class="d-flex flex-wrap gap-2 mb-4"></div>
+      <button class="btn btn-primary" id="analyze-btn"><i class="bi bi-search"></i> Analyze Symptoms</button>
+    </div>
+
+    <div id="results-card" class="card p-4 d-none">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-bold mb-0">AI Analysis Results</h6>
+        <span id="risk-badge"></span>
+      </div>
+      <div id="predictions-list"></div>
+      <div class="alert alert-warning mt-3 mb-0 small">
+        <i class="bi bi-exclamation-triangle"></i> This is an AI-generated suggestion, not a medical diagnosis. Please consult the recommended specialist for confirmation.
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/chatbot.js"></script>
+<script>
+requireRole("patient");
+initChatbot();
+
+function labelize(symptom) {
+  return symptom.split("_").map(w => w[0].toUpperCase() + w.slice(1)).join(" ");
+}
+
+async function loadSymptoms() {
+  try {
+    const res = await API.getSymptomList();
+    document.getElementById("symptom-chips").innerHTML = res.symptoms.map(s => `
+      <div class="symptom-chip">
+        <input type="checkbox" value="${s}" id="chip-${s}">
+        <label for="chip-${s}">${labelize(s)}</label>
+      </div>`).join("");
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
+document.getElementById("analyze-btn").addEventListener("click", async () => {
+  const selected = [...document.querySelectorAll("#symptom-chips input:checked")].map(i => i.value);
+  if (selected.length === 0) {
+    showToast("Please select at least one symptom", "error");
+    return;
+  }
+  const btn = document.getElementById("analyze-btn");
+  btn.disabled = true;
+  btn.textContent = "Analyzing...";
+
+  try {
+    const res = await API.predictDisease(selected);
+    const resultsCard = document.getElementById("results-card");
+    resultsCard.classList.remove("d-none");
+    document.getElementById("risk-badge").innerHTML = riskBadge(res.risk_level);
+    document.getElementById("predictions-list").innerHTML = res.predictions.map(p => `
+      <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+        <div>
+          <strong>${p.disease}</strong>
+          <div class="text-muted-sm">Recommended: ${p.specialist}</div>
+        </div>
+        <div class="text-end">
+          <div class="fw-bold text-primary">${p.confidence}%</div>
+          <div class="text-muted-sm">confidence</div>
+        </div>
+      </div>`).join("");
+    resultsCard.scrollIntoView({ behavior: "smooth" });
+
+    if (res.risk_level === "Emergency") {
+      showToast("High-risk symptoms detected. Please seek immediate medical attention.", "error");
+    }
+  } catch (err) {
+    showToast(err.message, "error");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-search"></i> Analyze Symptoms';
+  }
+});
+
+loadSymptoms();
+</script>
+</body>
+</html>
+sys=
