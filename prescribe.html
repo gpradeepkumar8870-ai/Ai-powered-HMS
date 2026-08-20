@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Write Prescription | AI-HMS</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<div class="d-flex">
+  <nav class="sidebar" style="width:250px;">
+    <h5 class="text-white px-3 mb-4"><i class="bi bi-heart-pulse-fill"></i> AI-HMS</h5>
+    <ul class="nav flex-column">
+      <li class="nav-item"><a class="nav-link" href="dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link" href="appointments.html"><i class="bi bi-calendar-check"></i> Appointments</a></li>
+      <li class="nav-item"><a class="nav-link" href="patient-records.html"><i class="bi bi-people"></i> My Patients</a></li>
+      <li class="nav-item"><a class="nav-link active" href="prescribe.html"><i class="bi bi-capsule"></i> Write Prescription</a></li>
+      <li class="nav-item"><a class="nav-link" href="billing.html"><i class="bi bi-receipt"></i> Billing</a></li>
+      <li class="nav-item mt-4"><a class="nav-link text-danger" href="#" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+    </ul>
+  </nav>
+
+  <main class="flex-grow-1 p-4">
+    <h4 class="mb-4">Write a Prescription</h4>
+    <div class="card p-4" style="max-width: 720px;">
+      <div id="alert-box" class="alert alert-danger d-none"></div>
+      <form id="prescribe-form">
+        <div class="mb-3">
+          <label class="form-label">Patient</label>
+          <select class="form-select" id="patient-select" required></select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Diagnosis</label>
+          <input type="text" class="form-control" id="diagnosis" required>
+        </div>
+
+        <label class="form-label">Medicines</label>
+        <div id="medicines-container"></div>
+        <button type="button" class="btn btn-sm btn-outline-primary mb-3" id="add-medicine"><i class="bi bi-plus"></i> Add Medicine</button>
+
+        <div class="mb-3">
+          <label class="form-label">Additional Notes</label>
+          <textarea class="form-control" id="notes" rows="2"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submit-btn">Save Prescription</button>
+      </form>
+    </div>
+  </main>
+</div>
+
+<template id="medicine-row-template">
+  <div class="row g-2 mb-2 medicine-row">
+    <div class="col-md-3"><input type="text" class="form-control form-control-sm med-name" placeholder="Medicine name" required></div>
+    <div class="col-md-3"><input type="text" class="form-control form-control-sm med-dosage" placeholder="Dosage (e.g. 500mg)" required></div>
+    <div class="col-md-3"><input type="text" class="form-control form-control-sm med-frequency" placeholder="Frequency (e.g. 2x/day)" required></div>
+    <div class="col-md-2"><input type="text" class="form-control form-control-sm med-duration" placeholder="Duration (e.g. 5 days)" required></div>
+    <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger remove-med"><i class="bi bi-trash"></i></button></div>
+  </div>
+</template>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+requireRole("doctor");
+
+async function loadPatients() {
+  try {
+    const res = await API.myPatients();
+    document.getElementById("patient-select").innerHTML = res.patients.length
+      ? res.patients.map(p => `<option value="${p._id}">${p.name}</option>`).join("")
+      : `<option value="">No patients found</option>`;
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
+function addMedicineRow() {
+  const template = document.getElementById("medicine-row-template");
+  const clone = template.content.cloneNode(true);
+  clone.querySelector(".remove-med").addEventListener("click", (e) => {
+    e.target.closest(".medicine-row").remove();
+  });
+  document.getElementById("medicines-container").appendChild(clone);
+}
+document.getElementById("add-medicine").addEventListener("click", addMedicineRow);
+addMedicineRow(); // start with one row
+
+document.getElementById("prescribe-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const alertBox = document.getElementById("alert-box");
+  alertBox.classList.add("d-none");
+
+  const medicines = [...document.querySelectorAll(".medicine-row")].map(row => ({
+    name: row.querySelector(".med-name").value,
+    dosage: row.querySelector(".med-dosage").value,
+    frequency: row.querySelector(".med-frequency").value,
+    duration: row.querySelector(".med-duration").value,
+  }));
+
+  if (medicines.length === 0) {
+    alertBox.textContent = "Please add at least one medicine";
+    alertBox.classList.remove("d-none");
+    return;
+  }
+
+  const btn = document.getElementById("submit-btn");
+  btn.disabled = true;
+  btn.textContent = "Saving...";
+
+  try {
+    await API.writePrescription({
+      patient_id: document.getElementById("patient-select").value,
+      diagnosis: document.getElementById("diagnosis").value,
+      medicines,
+      notes: document.getElementById("notes").value,
+    });
+    showToast("Prescription saved successfully");
+    document.getElementById("prescribe-form").reset();
+    document.getElementById("medicines-container").innerHTML = "";
+    addMedicineRow();
+  } catch (err) {
+    alertBox.textContent = err.message;
+    alertBox.classList.remove("d-none");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Save Prescription";
+  }
+});
+
+loadPatients();
+</script>
+</body>
+</html>
