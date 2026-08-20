@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Patients | AI-HMS</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<div class="d-flex">
+  <nav class="sidebar" style="width:250px;">
+    <h5 class="text-white px-3 mb-4"><i class="bi bi-heart-pulse-fill"></i> AI-HMS</h5>
+    <ul class="nav flex-column">
+      <li class="nav-item"><a class="nav-link" href="dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link" href="appointments.html"><i class="bi bi-calendar-check"></i> Appointments</a></li>
+      <li class="nav-item"><a class="nav-link active" href="patient-records.html"><i class="bi bi-people"></i> My Patients</a></li>
+      <li class="nav-item"><a class="nav-link" href="prescribe.html"><i class="bi bi-capsule"></i> Write Prescription</a></li>
+      <li class="nav-item"><a class="nav-link" href="billing.html"><i class="bi bi-receipt"></i> Billing</a></li>
+      <li class="nav-item mt-4"><a class="nav-link text-danger" href="#" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+    </ul>
+  </nav>
+
+  <main class="flex-grow-1 p-4">
+    <h4 class="mb-4">My Patients</h4>
+    <div class="card p-3">
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead><tr><th>Name</th><th>Age</th><th>Gender</th><th>Blood Group</th><th>Phone</th><th>Action</th></tr></thead>
+          <tbody id="patients-body"><tr><td colspan="6" class="text-center text-muted-sm">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- View history modal -->
+<div class="modal fade" id="historyModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="history-patient-name">Patient History</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="history-body">Loading...</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+requireRole("doctor");
+
+async function loadPatients() {
+  try {
+    const res = await API.myPatients();
+    document.getElementById("patients-body").innerHTML = res.patients.length
+      ? res.patients.map(p => `
+        <tr>
+          <td>${p.name}</td>
+          <td>${p.age || "-"}</td>
+          <td>${p.gender || "-"}</td>
+          <td>${p.blood_group || "-"}</td>
+          <td>${p.phone || "-"}</td>
+          <td><button class="btn btn-sm btn-outline-primary" onclick="viewHistory('${p._id}','${p.name}')">View History</button></td>
+        </tr>`).join("")
+      : `<tr><td colspan="6" class="text-center text-muted-sm">No patients yet</td></tr>`;
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
+async function viewHistory(patientId, name) {
+  document.getElementById("history-patient-name").textContent = `${name}'s Medical History`;
+  const modal = new bootstrap.Modal(document.getElementById("historyModal"));
+  modal.show();
+  const body = document.getElementById("history-body");
+  body.innerHTML = "Loading...";
+  try {
+    const res = await API.medicalHistory(patientId);
+    body.innerHTML = `
+      <h6 class="fw-bold">Prescriptions (${res.prescriptions.length})</h6>
+      ${res.prescriptions.length ? res.prescriptions.map(p => `<div class="border-bottom py-2"><strong>${p.diagnosis}</strong> — ${formatDate(p.created_at)}</div>`).join("") : '<p class="text-muted-sm">None</p>'}
+      <h6 class="fw-bold mt-3">AI Symptom Checks (${res.ai_symptom_checks.length})</h6>
+      ${res.ai_symptom_checks.length ? res.ai_symptom_checks.map(c => `<div class="border-bottom py-2 d-flex justify-content-between"><span>${c.predictions[0]?.disease || "-"} (${formatDate(c.created_at)})</span>${riskBadge(c.risk_level)}</div>`).join("") : '<p class="text-muted-sm">None</p>'}
+    `;
+  } catch (err) {
+    body.innerHTML = `<p class="text-danger">${err.message}</p>`;
+  }
+}
+loadPatients();
+</script>
+</body>
+</html>
