@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manage Patients | AI-HMS</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<div class="d-flex">
+  <nav class="sidebar" style="width:250px;">
+    <h5 class="text-white px-3 mb-4"><i class="bi bi-heart-pulse-fill"></i> AI-HMS</h5>
+    <ul class="nav flex-column">
+      <li class="nav-item"><a class="nav-link" href="dashboard.html"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+      <li class="nav-item"><a class="nav-link" href="doctors.html"><i class="bi bi-person-badge"></i> Manage Doctors</a></li>
+      <li class="nav-item"><a class="nav-link active" href="patients.html"><i class="bi bi-people"></i> Manage Patients</a></li>
+      <li class="nav-item"><a class="nav-link" href="departments.html"><i class="bi bi-diagram-3"></i> Departments</a></li>
+      <li class="nav-item"><a class="nav-link" href="billing.html"><i class="bi bi-receipt"></i> Billing</a></li>
+      <li class="nav-item"><a class="nav-link" href="reports.html"><i class="bi bi-bar-chart"></i> Reports & Analytics</a></li>
+      <li class="nav-item mt-4"><a class="nav-link text-danger" href="#" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+    </ul>
+  </nav>
+
+  <main class="flex-grow-1 p-4">
+    <h4 class="mb-4">Manage Patients</h4>
+    <div class="card p-3">
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead><tr><th>Name</th><th>Email</th><th>Age</th><th>Gender</th><th>Phone</th><th>Action</th></tr></thead>
+          <tbody id="patients-body"><tr><td colspan="6" class="text-center text-muted-sm">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+requireRole("admin");
+
+async function loadPatients() {
+  try {
+    const res = await API.listAllPatients();
+    document.getElementById("patients-body").innerHTML = res.patients.length
+      ? res.patients.map(p => `
+        <tr>
+          <td>${p.name}</td><td>${p.email}</td><td>${p.age || "-"}</td><td>${p.gender || "-"}</td><td>${p.phone || "-"}</td>
+          <td><button class="btn btn-sm btn-outline-danger" onclick="removePatient('${p._id}')">Remove</button></td>
+        </tr>`).join("")
+      : `<tr><td colspan="6" class="text-center text-muted-sm">No patients registered</td></tr>`;
+  } catch (err) { showToast(err.message, "error"); }
+}
+
+async function removePatient(id) {
+  if (!confirm("Permanently remove this patient record?")) return;
+  try { await API.removePatient(id); showToast("Patient removed"); loadPatients(); }
+  catch (err) { showToast(err.message, "error"); }
+}
+loadPatients();
+</script>
+</body>
+</html>
