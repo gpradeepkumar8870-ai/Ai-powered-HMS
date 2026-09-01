@@ -1,0 +1,31 @@
+fever,cough,headache,fatigue,sore_throat,shortness_of_breath,chest_pain,nausea,vomiting,abdominal_pain,diarrhea,joint_pain,rash,dizziness,loss_of_appetite,runny_nose,body_ache,disease,specialist
+1,1,0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,Common Cold,General Physician
+1,1,0,1,1,0,0,0,0,0,0,1,0,0,0,0,1,Influenza,General Physician
+1,0,1,1,0,0,0,1,1,0,0,0,0,1,1,0,1,Malaria,General Physician
+1,0,1,1,0,0,0,1,0,0,1,0,0,0,1,0,1,Typhoid,General Physician
+0,1,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,Bronchitis,Pulmonologist
+1,1,0,1,0,1,1,0,0,0,0,0,0,0,0,0,0,Pneumonia,Pulmonologist
+0,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,Asthma,Pulmonologist
+0,0,1,1,0,0,0,1,1,0,0,0,0,1,0,0,0,Migraine,Neurologist
+0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,Vertigo,Neurologist
+1,0,1,1,0,0,0,0,0,0,0,0,1,0,0,0,1,Chikungunya,General Physician
+0,0,0,1,0,1,1,0,0,0,0,0,0,0,0,0,0,Heart Disease,Cardiologist
+0,0,0,0,0,1,1,0,0,0,0,0,0,1,0,0,0,Angina,Cardiologist
+0,0,0,1,0,0,0,1,1,1,0,0,0,0,1,0,0,Gastritis,Gastroenterologist
+0,0,0,0,0,0,0,1,1,1,1,0,0,0,1,0,0,Food Poisoning,Gastroenterologist
+0,0,0,0,0,0,0,1,0,1,1,0,0,0,0,0,0,Irritable Bowel Syndrome,Gastroenterologist
+0,0,0,1,0,0,0,0,0,1,1,0,0,0,1,0,0,Gastroenteritis,Gastroenterologist
+1,0,0,1,0,0,0,0,0,0,0,1,1,0,0,0,1,Dengue,General Physician
+0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,1,Arthritis,Orthopedic
+0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,Rheumatoid Arthritis,Orthopedic
+0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,Allergic Dermatitis,Dermatologist
+1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,Chickenpox,Dermatologist
+1,1,0,0,1,0,0,0,0,0,0,0,1,0,0,1,1,Measles,Dermatologist
+0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,Sinusitis,ENT Specialist
+0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,Pharyngitis,ENT Specialist
+0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,Tonsillitis,ENT Specialist
+0,0,1,1,0,0,0,0,0,0,0,0,0,1,0,0,0,Hypertension,Cardiologist
+0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,Hypoglycemia,Endocrinologist
+0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,Diabetes,Endocrinologist
+0,0,0,1,0,0,0,1,1,0,0,0,0,0,1,0,0,Thyroid Disorder,Endocrinologist
+0,0,1,1,0,0,0,0,0,0,0,1,0,0,0,0,1,Viral Fever,General Physician
