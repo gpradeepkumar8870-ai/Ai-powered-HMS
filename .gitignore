@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.env
+
+# Uploaded lab reports (runtime data, not source)
+backend/uploads/lab_reports/*
+!backend/uploads/lab_reports/.gitkeep
+
+# OS
+.DS_Store
